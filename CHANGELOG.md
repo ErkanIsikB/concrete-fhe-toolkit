@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-06-16
+
+- Add GitHub repository and example notebook links to package metadata.
+- Clarify that README bounds are public application limits, not values learned
+  from encrypted arrays.
+
 ## 0.1.1 - 2026-06-15
 
 - Remove references to unrelated encryption libraries from package metadata.

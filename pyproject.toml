@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "concrete-fhe-toolkit"
-version = "0.1.1"
+version = "0.1.2"
 description = "Bounded integer helpers for compiling common Concrete FHE circuits"
 readme = "README.md"
 requires-python = ">=3.9,<3.13"
@@ -39,6 +39,9 @@ dependencies = [
 
 [project.urls]
 Company = "https://www.agrafintech.com"
+Homepage = "https://github.com/ErkanIsikB/concrete-fhe-toolkit"
+Repository = "https://github.com/ErkanIsikB/concrete-fhe-toolkit"
+"Example notebook" = "https://www.kaggle.com/code/erkankbacak/concrete-fhe-toolkit-test"
 
 [project.optional-dependencies]
 test = [
