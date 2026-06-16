@@ -1,0 +1,5 @@
+include CHANGELOG.md
+include THIRD_PARTY_NOTICES.md
+include .env.example
+exclude .env
+recursive-include examples *.py
