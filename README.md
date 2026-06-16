@@ -50,6 +50,13 @@ Concrete circuits.
 All operations use integer inputs. You must choose fixed input bounds when
 compiling a circuit, and runtime inputs must stay inside those bounds.
 
+The bounds are not the hidden minimum and maximum of a particular encrypted
+array. They are public, application-level limits that you know before
+compilation. For example, if your encrypted scores are always percentages, use
+`min_value=0` and `max_value=100`. If your private balances are stored in a
+range from `-1_000` to `1_000`, use those as the bounds. Wider bounds are more
+flexible, but they usually make the compiled circuit more expensive.
+
 ## Quick Start
 
 ```python
@@ -59,11 +66,11 @@ from concrete_fhe_toolkit import compile_argmin, compile_sort
 
 values = np.array([12, 3, 7, 1, 15, 0, 4, 9], dtype=np.int64)
 
-sort_circuit = compile_sort(size=8, min_value=0, max_value=15)
+sort_circuit = compile_sort(size=8, min_value=0, max_value=100)
 print(sort_circuit.encrypt_run_decrypt(values))
 # [ 0  1  3  4  7  9 12 15]
 
-argmin_circuit = compile_argmin(size=8, min_value=0, max_value=15)
+argmin_circuit = compile_argmin(size=8, min_value=0, max_value=100)
 print(argmin_circuit.encrypt_run_decrypt(values))
 # 5
 ```
@@ -123,7 +130,7 @@ print(circuit.encrypt_run_decrypt(7, 7))
 ```python
 from concrete_fhe_toolkit import compile_compare_swap
 
-circuit = compile_compare_swap(min_value=0, max_value=15)
+circuit = compile_compare_swap(min_value=0, max_value=100)
 
 print(circuit.encrypt_run_decrypt(12, 3))
 # (3, 12)
@@ -141,11 +148,11 @@ from concrete_fhe_toolkit import compile_sort
 
 values = np.array([12, 3, 7, 1, 15, 0, 4, 9], dtype=np.int64)
 
-ascending = compile_sort(size=8, min_value=0, max_value=15)
+ascending = compile_sort(size=8, min_value=0, max_value=100)
 print(ascending.encrypt_run_decrypt(values))
 # [ 0  1  3  4  7  9 12 15]
 
-descending = compile_sort(size=8, min_value=0, max_value=15, descending=True)
+descending = compile_sort(size=8, min_value=0, max_value=100, descending=True)
 print(descending.encrypt_run_decrypt(values))
 # [15 12  9  7  4  3  1  0]
 ```
@@ -162,11 +169,11 @@ from concrete_fhe_toolkit import compile_maximum, compile_minimum
 
 values = np.array([12, 5, 7, 2, 15, 9, 4, 14], dtype=np.int64)
 
-minimum = compile_minimum(size=8, min_value=0, max_value=15)
+minimum = compile_minimum(size=8, min_value=0, max_value=100)
 print(minimum.encrypt_run_decrypt(values))
 # 2
 
-maximum = compile_maximum(size=8, min_value=0, max_value=15)
+maximum = compile_maximum(size=8, min_value=0, max_value=100)
 print(maximum.encrypt_run_decrypt(values))
 # 15
 ```
@@ -183,11 +190,11 @@ from concrete_fhe_toolkit import compile_argmax, compile_argmin
 
 values = np.array([12, 5, 7, 1, 15, 9, 4, 14], dtype=np.int64)
 
-argmin = compile_argmin(size=8, min_value=0, max_value=15)
+argmin = compile_argmin(size=8, min_value=0, max_value=100)
 print(argmin.encrypt_run_decrypt(values))
 # 3
 
-argmax = compile_argmax(size=8, min_value=0, max_value=15)
+argmax = compile_argmax(size=8, min_value=0, max_value=100)
 print(argmax.encrypt_run_decrypt(values))
 # 4
 ```
@@ -201,11 +208,11 @@ from concrete_fhe_toolkit import compile_argmin
 
 values = np.array([4, 1, 1, 3], dtype=np.int64)
 
-first = compile_argmin(size=4, min_value=0, max_value=4, tie_break="first")
+first = compile_argmin(size=4, min_value=0, max_value=10, tie_break="first")
 print(first.encrypt_run_decrypt(values))
 # 1
 
-last = compile_argmin(size=4, min_value=0, max_value=4, tie_break="last")
+last = compile_argmin(size=4, min_value=0, max_value=10, tie_break="last")
 print(last.encrypt_run_decrypt(values))
 # 2
 ```
@@ -220,8 +227,8 @@ Direct `x // y` does not compile when both values are encrypted in Concrete
 from concrete_fhe_toolkit import compile_floor_divide
 
 circuit = compile_floor_divide(
-    max_numerator=15,
-    max_denominator=7,
+    max_numerator=100,
+    max_denominator=10,
     zero_result=-1,
 )
 
@@ -243,9 +250,9 @@ print(circuit.encrypt_run_decrypt(15, 0))
 from concrete_fhe_toolkit import compile_floor_divide_by_product
 
 circuit = compile_floor_divide_by_product(
-    max_numerator=20,
-    max_left=5,
-    max_right=5,
+    max_numerator=100,
+    max_left=10,
+    max_right=10,
     zero_result=-1,
 )
 
@@ -267,14 +274,14 @@ from concrete import fhe
 
 from concrete_fhe_toolkit import make_minimum
 
-minimum_of_four = make_minimum(size=4, min_value=0, max_value=15)
+minimum_of_four = make_minimum(size=4, min_value=0, max_value=100)
 compiler = fhe.Compiler(minimum_of_four, {"x": "encrypted"})
 
 inputset = [
     np.array([0, 0, 0, 0], dtype=np.int64),
-    np.array([15, 15, 15, 15], dtype=np.int64),
-    np.array([0, 15, 0, 15], dtype=np.int64),
-    np.array([15, 0, 15, 0], dtype=np.int64),
+    np.array([100, 100, 100, 100], dtype=np.int64),
+    np.array([0, 100, 0, 100], dtype=np.int64),
+    np.array([100, 0, 100, 0], dtype=np.int64),
 ]
 
 circuit = compiler.compile(inputset)
