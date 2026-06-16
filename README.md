@@ -20,6 +20,20 @@ The package focuses on small, explicit, integer-only FHE circuits:
 pip install concrete-fhe-toolkit
 ```
 
+To install the latest source directly from GitHub:
+
+```bash
+pip install git+https://github.com/ErkanIsikB/concrete-fhe-toolkit.git
+```
+
+Or clone the repository and install it locally:
+
+```bash
+git clone https://github.com/ErkanIsikB/concrete-fhe-toolkit.git
+cd concrete-fhe-toolkit
+pip install .
+```
+
 Concrete 2.11 supports Python 3.9 through 3.12 on Linux and macOS.
 
 ## Important Concept
