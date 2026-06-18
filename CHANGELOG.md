@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 - 2026-06-18
+
+- Promote the package development status from Alpha to Beta.
+
 ## 0.1.2 - 2026-06-16
 
 - Add GitHub repository and example notebook links to package metadata.
