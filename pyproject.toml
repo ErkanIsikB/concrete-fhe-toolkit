@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "concrete-fhe-toolkit"
-version = "0.1.3"
-description = "Bounded integer helpers for compiling common Concrete FHE circuits"
+version = "0.2.0"
+description = "Bounded math helpers for compiling common Concrete FHE circuits"
 readme = "README.md"
 requires-python = ">=3.9,<3.13"
 license = "MIT"
@@ -17,8 +17,10 @@ keywords = [
   "concrete",
   "fhe",
   "homomorphic-encryption",
+  "math",
   "privacy",
   "cryptography",
+  "fixed-point",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -41,7 +43,9 @@ dependencies = [
 Company = "https://www.agrafintech.com"
 Homepage = "https://github.com/ErkanIsikB/concrete-fhe-toolkit"
 Repository = "https://github.com/ErkanIsikB/concrete-fhe-toolkit"
+Documentation = "https://github.com/ErkanIsikB/concrete-fhe-toolkit/tree/main/docs"
 "Example notebook" = "https://www.kaggle.com/code/erkankbacak/concrete-fhe-toolkit-test"
+"Math notebook" = "https://www.kaggle.com/code/erkankbacak/concrete-math-library"
 
 [project.optional-dependencies]
 test = [

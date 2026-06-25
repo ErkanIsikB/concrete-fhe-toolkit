@@ -1,5 +1,6 @@
 """Bounded integer helpers for Concrete FHE."""
 
+from . import math
 from .arithmetic import (
     compile_floor_divide,
     compile_floor_divide_by_product,
@@ -33,6 +34,7 @@ __all__ = [
     "compile_minimum",
     "compile_sign",
     "compile_sort",
+    "math",
     "make_argmax",
     "make_argmin",
     "make_compare_swap",
@@ -44,4 +46,4 @@ __all__ = [
     "sign",
 ]
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"

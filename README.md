@@ -2,11 +2,16 @@
 
 `concrete-fhe-toolkit` is an unofficial helper package for
 [Zama Concrete](https://docs.zama.ai/concrete). It provides reusable circuit
-builders for common bounded integer operations on encrypted Concrete inputs.
+builders for common bounded math operations on encrypted Concrete inputs.
 
-The package focuses on small, explicit, integer-only FHE circuits:
+The package focuses on explicit, bounded FHE circuits:
 
 - compare two encrypted integers
+- add, subtract, multiply, negate, square, and compare encrypted integers
+- compute encrypted integer math such as `abs`, clamp, modulo, GCD, LCM,
+  `isqrt`, primality, factorial, Fibonacci, combinations, and permutations
+- approximate fixed-point math such as floor, ceil, round, rescale, `sin`,
+  `cos`, `log`, `sqrt`, `erf`, `tanh`, and sigmoid with lookup tables
 - compare-swap two encrypted integers
 - sort encrypted integer arrays
 - find encrypted-array min/max values
@@ -38,14 +43,32 @@ Concrete 2.11 supports Python 3.9 through 3.12 on Linux and macOS.
 
 ## Important Concept
 
-The `compile_*` helpers compile Concrete circuits whose inputs are declared as
-encrypted. For example, `compile_sort(...)` internally compiles with
-`{"x": "encrypted"}`.
+Most users can start with the plain operation names in
+`concrete_fhe_toolkit.math`. Calling one of these operations compiles a Concrete
+circuit by default:
 
-The `make_*` helpers return traceable Python functions that can be composed into
-larger Concrete programs. They can also run on clear Python or NumPy values for
-ordinary testing, but they are designed to be compiled into encrypted-input
-Concrete circuits.
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+gcd = fhe_math.gcd(min_value=0, max_value=8)
+print(gcd.encrypt_run_decrypt(6, 4))
+# 2
+```
+
+These operation objects also expose the lower-level builders:
+
+- `fhe_math.gcd.compile(...)` compiles a ready-to-run encrypted circuit.
+- `fhe_math.gcd.make(...)` returns a traceable function that can be composed
+  into a larger Concrete program.
+
+The explicit `compile_*` and `make_*` names remain available for advanced users
+and backwards compatibility. For example, `fhe_math.compile_gcd(...)` is the
+same compiler used by `fhe_math.gcd(...)`, and `fhe_math.make_gcd(...)` is the
+same builder used by `fhe_math.gcd.make(...)`.
+
+Use `make_*` only when you are manually composing several operations into one
+larger circuit. For ordinary one-operation usage, prefer the plain operation
+name or the explicit `compile_*` helper.
 
 All operations use integer inputs. You must choose fixed input bounds when
 compiling a circuit, and runtime inputs must stay inside those bounds.
@@ -56,6 +79,22 @@ compilation. For example, if your encrypted scores are always percentages, use
 `min_value=0` and `max_value=100`. If your private balances are stored in a
 range from `-1_000` to `1_000`, use those as the bounds. Wider bounds are more
 flexible, but they usually make the compiled circuit more expensive.
+
+The `concrete_fhe_toolkit.math` subpackage is intentionally closer to Python's
+`math` module, but every operation still needs explicit bounds because FHE
+circuits are compiled ahead of time. Fixed-point helpers accept encrypted
+integers that represent scaled real values. For example, with
+`input_scale=100`, the encrypted integer `314` represents `3.14`.
+
+Common bound parameters:
+
+| Parameter style | Meaning |
+| --- | --- |
+| `min_value`, `max_value` | Inclusive input range for one or two integer inputs |
+| `min_input`, `max_input` | Inclusive input range for scaled fixed-point values |
+| `max_n` | Encrypted index range `0..max_n`, used by factorial/Fibonacci/combinatorics |
+| `numerator_width`, `denominator_width` | Unsigned scalar bit widths for bit-level division |
+| `fractional_bits` | Number of binary fractional bits in fixed-point division output |
 
 ## Quick Start
 
@@ -74,6 +113,42 @@ argmin_circuit = compile_argmin(size=8, min_value=0, max_value=100)
 print(argmin_circuit.encrypt_run_decrypt(values))
 # 5
 ```
+
+Math helpers live under `concrete_fhe_toolkit.math`:
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+gcd_circuit = fhe_math.gcd(min_value=0, max_value=8)
+print(gcd_circuit.encrypt_run_decrypt(6, 4))
+# 2
+
+sin_circuit = fhe_math.sin(
+    min_input=0,
+    max_input=90,
+    input_scale=1,
+    output_scale=100,
+    angle_unit="degrees",
+)
+print(sin_circuit.encrypt_run_decrypt(30))
+# 50  (represents 0.50)
+```
+
+## Documentation
+
+The README is the shared GitHub and PyPI landing page. It gives the core usage
+model, quick examples, and the public API overview.
+
+For the fuller guide, use the GitHub documentation:
+
+- [Documentation index](https://github.com/ErkanIsikB/concrete-fhe-toolkit/tree/main/docs)
+- [Bounds and costs](https://github.com/ErkanIsikB/concrete-fhe-toolkit/blob/main/docs/bounds-and-costs.md)
+- [API reference](https://github.com/ErkanIsikB/concrete-fhe-toolkit/blob/main/docs/api-reference.md)
+- [Maintainer testing and release checks](https://github.com/ErkanIsikB/concrete-fhe-toolkit/blob/main/docs/testing-and-release.md)
+
+The short version: use `fhe_math.gcd(...)` or another friendly operation name
+for a ready-to-run circuit, use `.make(...)` when composing a larger Concrete
+program, and choose public bounds that cover all runtime inputs.
 
 ## Public API
 
@@ -100,6 +175,87 @@ Array operations:
 - `compile_argmin(size, min_value=0, max_value=15, tie_break="first", configuration=None)`
 - `make_argmax(size, min_value=0, max_value=15, tie_break="first")`
 - `compile_argmax(size, min_value=0, max_value=15, tie_break="first", configuration=None)`
+
+Math subpackage:
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+```
+
+Friendly operation objects compile by default and expose `.make(...)` and
+`.compile(...)` for explicit control:
+
+- `absolute`, `clamp`, `modulo`, `divmod`, `is_close`
+- `factorial`, `fibonacci`, `power`, `comb`, `perm`
+- `gcd`, `lcm`, `is_coprime`, `is_divisible`, `isqrt`, `is_even`, `is_odd`,
+  `is_prime`
+- `floor`, `ceil`, `trunc`, `round`, `floor_ceil`, `rescale`
+- `sin`, `cos`, `tan`, `exp`, `expm1`, `log`, `log1p`, `log2`, `log10`,
+  `sqrt`, `erf`, `erfc`, `tanh`, `sinh`, `cosh`, `sigmoid`
+- `unsigned_floor_divide`, `fixed_point_divide`
+
+Basic integer operations:
+
+- native arithmetic: `add`, `subtract`, `multiply`, `negate`, `square`
+- comparisons: `equal`, `not_equal`, `less`, `less_equal`, `greater`, `greater_equal`
+- compilers: `compile_add`, `compile_subtract`, `compile_multiply`,
+  `compile_negate`, `compile_square`, `compile_scalar_multiply`
+- lookup helpers: `make_absolute`, `compile_absolute`, `make_clamp`,
+  `compile_clamp`, `make_modulo`, `compile_modulo`, `make_divmod`,
+  `compile_divmod`, `make_is_close`, `compile_is_close`
+
+Combinatorics:
+
+- `make_factorial`, `compile_factorial`
+- `make_fibonacci`, `compile_fibonacci`
+- `make_power`, `compile_power`
+- `make_comb`, `compile_comb`
+- `make_perm`, `compile_perm`
+
+Number theory:
+
+- `make_gcd`, `compile_gcd`
+- `make_lcm`, `compile_lcm`
+- `make_is_coprime`, `compile_is_coprime`
+- `make_is_divisible`, `compile_is_divisible`
+- `make_isqrt`, `compile_isqrt`
+- `make_is_even`, `compile_is_even`
+- `make_is_odd`, `compile_is_odd`
+- `make_is_prime`, `compile_is_prime`
+
+Fixed-point helpers:
+
+- `make_floor`, `compile_floor`
+- `make_ceil`, `compile_ceil`
+- `make_trunc`, `compile_trunc`
+- `make_round`, `compile_round`
+- `make_floor_ceil`, `compile_floor_ceil`
+- `make_rescale`, `compile_rescale`
+
+Special fixed-point helpers:
+
+- trigonometric: `make_sin`, `compile_sin`, `make_cos`, `compile_cos`,
+  `make_tan`, `compile_tan`
+- exponential/logarithmic: `make_exp`, `compile_exp`, `make_expm1`,
+  `compile_expm1`, `make_log`, `compile_log`, `make_log1p`,
+  `compile_log1p`, `make_log2`, `compile_log2`, `make_log10`,
+  `compile_log10`
+- roots/special activations: `make_sqrt`, `compile_sqrt`, `make_erf`,
+  `compile_erf`, `make_erfc`, `compile_erfc`, `make_tanh`, `compile_tanh`,
+  `make_sinh`, `compile_sinh`, `make_cosh`, `compile_cosh`,
+  `make_sigmoid`, `compile_sigmoid`
+
+Bit-level arithmetic helpers:
+
+- bit primitives: `bit_not`, `bit_and`, `bit_or`, `bit_xor`, `bit_select`,
+  `full_adder_bit`, `full_subtractor_bit`
+- conversion helpers: `integer_to_bits`, `bits_to_unsigned`,
+  `unsigned_to_bits`, `twos_complement_bits`
+- signed bit helpers: `sign_magnitude_to_twos_complement_bits`,
+  `twos_complement_add_bits`, `twos_complement_multiply_by_constant_bits`
+- binary division: `unsigned_divide_bits`, `fixed_point_divide_bits`,
+  `make_unsigned_floor_divide`, `compile_unsigned_floor_divide`,
+  `make_fixed_point_divide`, `compile_fixed_point_divide`
 
 ## Examples
 
@@ -263,6 +419,128 @@ print(circuit.encrypt_run_decrypt(20, 0, 5))
 # -1
 ```
 
+### Math Subpackage
+
+Use `concrete_fhe_toolkit.math` for Python-math-style helpers. Some compile to
+native Concrete arithmetic, while functions such as GCD, factorial, prime
+testing, and fixed-point `sin` use lookup tables over the declared domain.
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+factorial = fhe_math.factorial(max_n=7)
+print(factorial.encrypt_run_decrypt(5))
+# 120
+
+modulo = fhe_math.modulo(
+    min_numerator=0,
+    max_numerator=20,
+    min_denominator=0,
+    max_denominator=10,
+    zero_result=-1,
+)
+print(modulo.encrypt_run_decrypt(17, 5))
+# 2
+
+tanh = fhe_math.tanh(
+    min_input=-30,
+    max_input=30,
+    input_scale=10,
+    output_scale=100,
+)
+print(tanh.encrypt_run_decrypt(20))
+# 96  (represents tanh(2.0) ~= 0.96)
+```
+
+The plain operation name compiles by default. If you want to be explicit, use
+`.compile(...)`:
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+gcd = fhe_math.gcd.compile(min_value=0, max_value=8)
+print(gcd.simulate(6, 4))
+# 2
+```
+
+Use `.make(...)` when composing a larger circuit yourself:
+
+```python
+from concrete import fhe
+from concrete_fhe_toolkit import math as fhe_math
+
+absolute = fhe_math.absolute.make(-8, 8)
+gcd = fhe_math.gcd.make(0, 8)
+
+def program(x, y):
+    return gcd(absolute(x), y)
+
+compiler = fhe.Compiler(program, {"x": "encrypted", "y": "encrypted"})
+circuit = compiler.compile([(x, y) for x in range(-8, 9) for y in range(9)])
+print(circuit.encrypt_run_decrypt(-6, 4))
+# 2
+```
+
+Functions with undefined mathematical inputs require an explicit encrypted
+fallback if the compiled domain includes invalid values:
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+log2 = fhe_math.log2(
+    min_input=0,
+    max_input=16,
+    invalid_result=-1,
+)
+print(log2.encrypt_run_decrypt(0))
+# -1
+```
+
+Large lookup tables are available, but the package asks you to opt in when a
+static estimate suggests the circuit may need substantial Concrete resources:
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+gcd = fhe_math.gcd(
+    min_value=0,
+    max_value=31,
+    allow_large_lookup=True,
+)
+print(gcd.simulate(24, 18))
+# 6
+```
+
+### Bit-Level Fixed-Point Division
+
+`unsigned_floor_divide` and `fixed_point_divide` use a restoring binary
+division circuit instead of a full lookup table. They are useful when you want
+division logic that scales with bit width rather than with every possible
+`(numerator, denominator)` value.
+
+```python
+from concrete_fhe_toolkit import math as fhe_math
+
+floor_divide = fhe_math.unsigned_floor_divide(
+    numerator_width=8,
+    denominator_width=8,
+    zero_result=0,
+)
+print(floor_divide.encrypt_run_decrypt(100, 7))
+# 14
+
+fixed_divide = fhe_math.fixed_point_divide(
+    numerator_width=8,
+    denominator_width=8,
+    fractional_bits=8,
+)
+print(fixed_divide.encrypt_run_decrypt(1, 3))
+# 85  (represents floor((1 / 3) * 256))
+```
+
+Inputs for these helpers must be unsigned integers that fit in the declared bit
+widths. Division by zero returns `zero_result`.
+
 ### Composing `make_*` Helpers
 
 Use `make_*` helpers when you want to build a larger Concrete function yourself.
@@ -295,24 +573,41 @@ boundary-aware inputsets automatically.
 ## Bounds and Limitations
 
 - Inputs must stay inside the bounds used at compilation.
+- Plain `concrete_fhe_toolkit.math` operation names compile by default. Use
+  `.make(...)` only when composing larger circuits manually.
 - Sorting requires a power-of-two array size.
 - Min/max and argmin/argmax support any positive fixed size.
 - Division helpers currently support nonnegative bounded inputs.
-- Larger bounds increase table-lookup bit width and cost.
+- Bit-level division helpers support unsigned scalar inputs that fit in the
+  declared bit widths and return integer or scaled-integer outputs.
+- Larger bounds increase table-lookup bit width and cost. Some math helpers
+  raise `LookupResourceError` unless you pass `allow_large_lookup=True`.
+- `concrete_fhe_toolkit.math` fixed-point helpers return scaled integers, not
+  Python floats.
+- Lookup-table outputs that require very large integer bit widths may exceed
+  Concrete's available parameter set even if you opt in to large lookups.
 - Concrete supports integer inputs and outputs, not arbitrary floating point.
 - FHE execution is probabilistic; choose Concrete error parameters appropriate
   for the application's risk.
 
-## Notebook Examples
+## Notebook provenance and examples
 
 This package was derived from these Kaggle experiments:
 
 - [Concrete min/max/index finding](https://www.kaggle.com/code/erkankbacak/concrete-minmax-index-finding)
 - [All encrypted division operations](https://www.kaggle.com/code/erkankbacak/all-encrypted-division-operations)
+- [Concrete math library](https://www.kaggle.com/code/erkankbacak/concrete-math-library)
 
 Additional usage notebook:
 
 - [concrete-fhe-toolkit-test](https://www.kaggle.com/code/erkankbacak/concrete-fhe-toolkit-test)
+
+The notebooks are useful background and examples, but the README and
+[`docs/`](https://github.com/ErkanIsikB/concrete-fhe-toolkit/tree/main/docs)
+are the canonical documentation for the current package API. Existing
+`make_*` and `compile_*` package APIs were kept for compatibility, while the
+new `concrete_fhe_toolkit.math` friendly operation names provide the preferred
+high-level interface for new code.
 
 ## License and Concrete Terms
 
